@@ -212,6 +212,10 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     # install pam_oauth2.so
     && git clone -b $PAM_OAUTH2 --recurse-submodules https://github.com/CyberDem0n/pam-oauth2.git \
     && make -C pam-oauth2 install \
+    
+    # install postgres_exporter (Prometheus)
+    && curl -L https://github.com/wrouesnel/postgres_exporter/releases/download/v0.4.4/postgres_exporter_v0.4.4_linux-amd64.tar.gz \
+        | tar xz -C /bin --strip=1 --wildcards --no-anchored postgres_exporter \
 
     # Clean up
     && apt-get purge -y ${BUILD_PACKAGES} libmagic1 bsdmainutils \
