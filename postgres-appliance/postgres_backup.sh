@@ -35,4 +35,4 @@ POOL_SIZE=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || 1)
 # push a new base backup
 log "producing a new backup"
 # We reduce the priority of the backup for CPU consumption
-exec nice -n 5 envdir "${WALE_ENV_DIR}" wal-e --aws-instance-profile backup-push "${PGDATA}" --pool-size ${POOL_SIZE}
+exec nice -n 5 envdir "${WALE_ENV_DIR}" wal-e backup-push "${PGDATA}" --pool-size ${POOL_SIZE}
