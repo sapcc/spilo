@@ -120,7 +120,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     && perl -ne 'print unless /PG_TRY/ .. /PG_CATCH/' pgextwlist/pgextwlist.c > pgextwlist.c.f \
     && egrep -v '(PG_END_TRY|EmitWarningsOnPlaceholders)' pgextwlist.c.f > pgextwlist/pgextwlist.c \
 
-    && git clone git://www.sigaev.ru/plantuner.git \
+    && git clone https://github.com/sapcc/plantuner.git \
 
     && git clone https://github.com/reorg/pg_repack.git \
     && cd pg_repack \
