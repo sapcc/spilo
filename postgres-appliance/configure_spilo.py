@@ -493,7 +493,7 @@ def write_wale_environment(placeholders, provider, prefix, overwrite):
     if wale.get('WAL_S3_BUCKET'):
         write_file('s3://{WAL_S3_BUCKET}/spilo/{WAL_BUCKET_SCOPE_PREFIX}{SCOPE}{WAL_BUCKET_SCOPE_SUFFIX}/wal/'.format(**wale),
                    os.path.join(wale['WALE_ENV_DIR'], 'WALE_S3_PREFIX'), overwrite)
-        match = re.search(r'.*(eu-\w+-\d+)-.*', wale['WAL_S3_BUCKET'])
+        match = re.search(r'.*(eu-\w+-\d+).*', wale['WAL_S3_BUCKET'])
         if match:
             region = match.group(1)
         else:
