@@ -497,7 +497,7 @@ def write_wale_environment(placeholders, provider, prefix, overwrite):
         if match:
             region = match.group(1)
         else:
-            region = placeholders['instance_data']['zone'][:-1]
+            region = os.environ.get('AWS_REGION')
         write_file('https+path://s3-{}.amazonaws.com:443'.format(region),
                    os.path.join(wale['WALE_ENV_DIR'], 'WALE_S3_ENDPOINT'), overwrite)
         if os.environ.get('AWS_ACCESS_KEY_ID'):
@@ -505,6 +505,9 @@ def write_wale_environment(placeholders, provider, prefix, overwrite):
                    os.path.join(placeholders['WALE_ENV_DIR'], 'AWS_ACCESS_KEY_ID'), overwrite)
             write_file(os.environ.get('AWS_SECRET_ACCESS_KEY'),
                    os.path.join(placeholders['WALE_ENV_DIR'], 'AWS_SECRET_ACCESS_KEY'), overwrite)
+        if os.environ.get('AWS_REGION'):
+            write_file(os.environ.get('AWS_REGION'),
+                   os.path.join(placeholders['WALE_ENV_DIR'], 'AWS_REGION'), overwrite)
     elif wale.get('WAL_GCS_BUCKET'):
         write_file('gs://{WAL_GCS_BUCKET}/spilo/{WAL_BUCKET_SCOPE_PREFIX}{SCOPE}{WAL_BUCKET_SCOPE_SUFFIX}/wal/'.format(**wale),
                    os.path.join(wale['WALE_ENV_DIR'], 'WALE_GS_PREFIX'), overwrite)
