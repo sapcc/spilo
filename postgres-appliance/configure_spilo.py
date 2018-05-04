@@ -249,7 +249,7 @@ postgresql:
     envdir: {{WALE_ENV_DIR}}
     threshold_megabytes: {{WALE_BACKUP_THRESHOLD_MEGABYTES}}
     threshold_backup_size_percentage: {{WALE_BACKUP_THRESHOLD_PERCENTAGE}}
-    use_iam: 1
+    use_iam: 0
     retries: 2
     no_master: 1
   basebackup_fast_xlog:
