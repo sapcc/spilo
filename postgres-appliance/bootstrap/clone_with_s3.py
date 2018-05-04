@@ -70,6 +70,7 @@ def run_clone_from_s3(options):
     backup_name = 'LATEST'
     if options.recovery_target_time:
         backup_list_cmd = build_wale_command(options.wale_envdir, 'backup-list')
+        logger.info(' '.join(backup_list_cmd))
         backup_list = subprocess.check_output(backup_list_cmd)
         backup_name = choose_backup(backup_list, options.recovery_target_time)
     backup_fetch_cmd = build_wale_command(options.wale_envdir, 'backup-fetch', options.datadir, backup_name)
