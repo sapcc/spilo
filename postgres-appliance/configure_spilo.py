@@ -412,7 +412,7 @@ def get_placeholders(provider):
     placeholders.setdefault('postgresql', {})
     placeholders['postgresql'].setdefault('parameters', {})
     placeholders['postgresql']['parameters']['archive_command'] = \
-        'envdir "{0}" wal-e --aws-instance-profile wal-push "%p"'.format(placeholders['WALE_ENV_DIR']) \
+        'envdir "{0}" wal-e wal-push "%p"'.format(placeholders['WALE_ENV_DIR']) \
         if placeholders['USE_WALE'] else '/bin/true'
 
     if os.path.exists(MEMORY_LIMIT_IN_BYTES_PATH):
