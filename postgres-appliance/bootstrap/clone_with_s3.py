@@ -36,7 +36,7 @@ def read_configuration():
 
 
 def build_wale_command(envdir, command, datadir=None, backup=None):
-    cmd = ['envdir', envdir, 'wal-e', '--aws-instance-profile']
+    cmd = ['envdir', envdir, 'wal-e']
     if command == 'backup-list':
         cmd.extend([command, '--detail'])
     elif command == 'backup-fetch':
