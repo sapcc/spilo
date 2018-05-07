@@ -15,7 +15,6 @@ from collections import defaultdict
 import yaml
 import pystache
 import requests
-from shutil import copy2
 
 
 PROVIDER_AWS = "aws"
@@ -506,8 +505,10 @@ def write_wale_environment(placeholders, provider, prefix, overwrite):
                    os.path.join(placeholders['WALE_ENV_DIR'], 'AWS_ACCESS_KEY_ID'), overwrite)
             write_file(os.environ.get('AWS_SECRET_ACCESS_KEY'),
                    os.path.join(placeholders['WALE_ENV_DIR'], 'AWS_SECRET_ACCESS_KEY'), overwrite)
-            copy2(os.path.join(placeholders['WALE_ENV_DIR'], 'AWS_SECRET_ACCESS_KEY'), placeholders['CLONE_WALE_ENV_DIR'])
-            copy2(os.path.join(placeholders['WALE_ENV_DIR'], 'AWS_ACCESS_KEY_ID'), placeholders['CLONE_WALE_ENV_DIR'])
+            write_file(os.environ.get('AWS_ACCESS_KEY_ID'),
+                   os.path.join(wale['WALE_ENV_DIR'], 'AWS_ACCESS_KEY_ID'), overwrite)
+            write_file(os.environ.get('AWS_SECRET_ACCESS_KEY'),
+                   os.path.join(wale['WALE_ENV_DIR'], 'AWS_SECRET_ACCESS_KEY'), overwrite)
         if os.environ.get('AWS_REGION'):
             write_file(os.environ.get('AWS_REGION'),
                    os.path.join(placeholders['WALE_ENV_DIR'], 'AWS_REGION'), overwrite)
