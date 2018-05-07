@@ -489,6 +489,8 @@ def write_wale_environment(placeholders, provider, prefix, overwrite):
 
     if not os.path.exists(wale['WALE_ENV_DIR']):
         os.makedirs(wale['WALE_ENV_DIR'])
+    if not os.path.exists(placeholders['WALE_ENV_DIR']):
+        os.makedirs(placeholders['WALE_ENV_DIR'])
 
     if wale.get('WAL_S3_BUCKET'):
         write_file('s3://{WAL_S3_BUCKET}/spilo/{WAL_BUCKET_SCOPE_PREFIX}{SCOPE}{WAL_BUCKET_SCOPE_SUFFIX}/wal/'.format(**wale),
