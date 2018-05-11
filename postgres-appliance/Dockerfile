@@ -364,7 +364,8 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     else \
         EXTRAS=",etcd,consul,zookeeper,aws" \
         && apt-get install -y python3-dnspython python3-kazoo python3-meld3 \
-        && pip3 install envdir wal-e[aws,google]==$WALE_VERSION \
+        pip3 install boto && \
+        pip3 install envdir git+https://github.com/stefanhipfel/wal-e@v1.1#egg=aws \
                 'git+https://github.com/Supervisor/supervisor.git@master#egg=supervisor' \
                 'git+https://github.com/zalando/pg_view.git@master#egg=pg-view' \
 
