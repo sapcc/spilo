@@ -122,7 +122,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
     && git clone https://github.com/reorg/pg_repack.git \
     && cd pg_repack \
-    #&& curl -sL https://github.com/reorg/pg_repack/pull/176.diff | patch -p1 \
+    && curl -sL https://github.com/reorg/pg_repack/pull/176.diff | patch -p1 \
 
     && for version in ${PGOLDVERSIONS} ${PGVERSION}; do \
             sed -i "s/ main.*$/ main $version/g" /etc/apt/sources.list.d/pgdg.list \
