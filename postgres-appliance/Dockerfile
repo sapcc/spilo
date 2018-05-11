@@ -144,6 +144,10 @@ RUN export DEBIAN_FRONTEND=noninteractive \
                         postgresql-${version}-pgq3 libpq5=$version* \
                         libpq-dev=$version* postgresql-server-dev-${version} \
 
+            # Fix for https://github.com/zalando/spilo/issues/228 
+            && ln -snf /usr/lib/postgresql/${version}/lib/libpgcommon.a /usr/lib/x86_64-linux-gnu/libpgcommon.a \
+            && ln -snf /usr/lib/postgresql/${version}/lib/libpgport.a /usr/lib/x86_64-linux-gnu/libpgport.a \
+
             && if [ "$DEMO" != "true" ]; then \
                 apt-get install -y postgresql-${version}-plv8 \
                             postgresql-${version}-postgis-${POSTGIS_VERSION} \
@@ -352,6 +356,8 @@ RUN export DEBIAN_FRONTEND=noninteractive \
             /usr/share/info \
             /usr/share/locale/?? \
             /usr/share/locale/??_?? \
+            /usr/lib/x86_64-linux-gnu/libpgcommon.a \
++           /usr/lib/x86_64-linux-gnu/libpgport.a \
             /usr/share/postgresql/*/man \
             /etc/pgbouncer/* \
             /usr/lib/postgresql/*/bin/createdb \
