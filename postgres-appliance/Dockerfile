@@ -66,12 +66,11 @@ ENV PGVERSION="$PGVERSION" \
     PGOLDVERSIONS="$PGOLDVERSIONS" \
     POSTGIS_VERSION=2.4 \
     BG_MON_COMMIT=57f50fd9b92a9ed3cdb185118fbce27d4d56984c \
-    DECODEBUFS_COMMIT=0d4db2816bc16cae81c06dd06a3fda00b7491fba \
-    HYPOPG=1.1.0 \
+    DECODERBUFS_COMMIT=e2da72713909d4315aa63f46819412ec4f9f6a42 \
     SET_USER=REL1_4_0 \
     PLPGSQL_CHECK=v1.2.2 \
     PLPROFILER=REL3_2 \
-    TIMESCALEDB=0.9.0 \
+    TIMESCALEDB=0.9.1 \
     PGEXTWLIST=v1.6 \
     PAM_OAUTH2=v1.0
 
@@ -98,15 +97,13 @@ RUN export DEBIAN_FRONTEND=noninteractive \
                 || apt-get -y -f install \
         && apt-get install -y libprotobuf-c1 \
 
-        && curl -s -L https://github.com/debezium/postgres-decoderbufs/archive/$DECODEBUFS_COMMIT.tar.gz | tar xz; \
+        && curl -s -L https://github.com/debezium/postgres-decoderbufs/archive/$DECODERBUFS_COMMIT.tar.gz | tar xz; \
     fi \
 
     && apt-get install -y libcurl3 libevent-2.0 libevent-pthreads-2.0 python3.5 $BUILD_PACKAGES \
 
     # prepare 3rd sources
     && curl -s -L https://github.com/CyberDem0n/bg_mon/archive/$BG_MON_COMMIT.tar.gz | tar xz \
-
-    && git clone -b $HYPOPG https://github.com/HypoPG/hypopg.git \
 
     && git clone -b $SET_USER https://github.com/pgaudit/set_user.git \
 
@@ -124,6 +121,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
     && git clone https://github.com/reorg/pg_repack.git \
     && cd pg_repack \
+    && curl -sL https://github.com/reorg/pg_repack/pull/176.diff | patch -p1 \
 
     && for version in ${PGOLDVERSIONS} ${PGVERSION}; do \
             sed -i "s/ main.*$/ main $version/g" /etc/apt/sources.list.d/pgdg.list \
@@ -141,7 +139,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
             # Install PostgreSQL binaries, contrib, plproxy and multiple pl's
             && apt-get install --allow-downgrades -y postgresql-contrib-${version} $EXTRAS \
                         postgresql-${version}-plproxy postgresql-plpython3-${version} \
-                        postgresql-${version}-pldebugger \
+                        postgresql-${version}-pldebugger postgresql-${version}-hypopg \
                         postgresql-${version}-pgq3 libpq5=$version* \
                         libpq-dev=$version* postgresql-server-dev-${version} \
 
@@ -162,7 +160,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
             done \
 
             && cd /builddeps \
-            && for n in bg_mon-${BG_MON_COMMIT} hypopg set_user plpgsql_check plprofiler pgextwlist plantuner; do \
+            && for n in bg_mon-${BG_MON_COMMIT} set_user plpgsql_check plprofiler pgextwlist plantuner; do \
                 make -C $n USE_PGXS=1 clean install-strip; \
             done \
 
@@ -170,7 +168,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
             && strip /usr/lib/postgresql/$version/lib/pg_repack.so /usr/lib/postgresql/$version/bin/pg_repack \
 
             && if [ "$version" != "9.3" ] && [ "$DEMO" != "true" ]; then \
-                make -C postgres-decoderbufs-$DECODEBUFS_COMMIT clean install-strip; \
+                make -C postgres-decoderbufs-$DECODERBUFS_COMMIT clean install-strip; \
             fi \
 
             # Install pg_rewind on 9.3 and 9.4
@@ -190,14 +188,15 @@ RUN export DEBIAN_FRONTEND=noninteractive \
                 && strip /usr/lib/postgresql/$version/lib/timescaledb.so; \
             fi \
 
-            && apt-get purge -y libpq-dev=$version* postgresql-server-dev-${version}; \
+            && apt-get purge -y libpq-dev=$version*; \
     done \
 
     && apt-get install -y skytools3-ticker pspg \
 
     && if [ "$DEMO" != "true" ]; then \
+        cd /builddeps \
+
         # patch, build and install pgbouncer
-        mkdir pgbouncer && cd pgbouncer \
         && apt-get source pgbouncer \
         && cd $(ls -d pgbouncer-*) \
         # Set last_connect_time for pool only when it really failed to connect
@@ -206,15 +205,33 @@ RUN export DEBIAN_FRONTEND=noninteractive \
         && sed -i 's/\(MAX_PASSWORD\t\).*/\11024/' include/bouncer.h \
         && debuild -b -uc -us \
         && dpkg -i ../pgbouncer_*.deb \
-        && cd ../..; \
+        && cd .. \
+
+        # patch, build and install partman (get rid from python2.7 dependency)
+        && apt-get install -y postgresql-server-dev-all \
+        && apt-get source postgresql-${version}-partman \
+        && cd $(ls -d pg-partman-*) \
+        && sed -i 's|/usr/bin/env python|/usr/bin/env python3|' bin/*.py \
+        && sed -i 's|python|python3|g' debian/control.in \
+        && debuild -b -uc -us \
+        && cd .. \
+        && for version in ${PGOLDVERSIONS} ${PGVERSION}; do \
+            for deb in postgresql-${version}-partman_*.deb; do \
+                if [ -f $deb ]; then dpkg -i $deb; fi; \
+            done; \
+        done; \
     fi \
 
     # install pam_oauth2.so
     && git clone -b $PAM_OAUTH2 --recurse-submodules https://github.com/CyberDem0n/pam-oauth2.git \
     && make -C pam-oauth2 install \
+    
+    # install postgres_exporter (Prometheus)
+    && curl -L https://github.com/wrouesnel/postgres_exporter/releases/download/v0.4.4/postgres_exporter_v0.4.4_linux-amd64.tar.gz \
+        | tar xz -C /bin --strip=1 --wildcards --no-anchored postgres_exporter \
 
     # Clean up
-    && apt-get purge -y ${BUILD_PACKAGES} libmagic1 bsdmainutils \
+    && apt-get purge -y ${BUILD_PACKAGES} postgresql-server-dev-* libmagic1 bsdmainutils \
     && apt-get autoremove -y \
 
     && apt-get clean \
@@ -314,7 +331,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
         done \
 
         && cd /usr/lib/postgresql/$PGVERSION/bin \
-        && for u in clusterdb pg_archivecleanup pg_basebackup pg_isready pg_test_fsync pg_test_timing pgbench psql reindexdb vacuumdb vacuumlo; do \
+        && for u in clusterdb pg_archivecleanup pg_basebackup pg_isready pg_test_fsync pg_test_timing pgbench psql reindexdb vacuumdb vacuumlo *.py; do \
             for v in /usr/lib/postgresql/*; do \
                 if [ "$v" != "/usr/lib/postgresql/$PGVERSION" ] && [ -f "$v/bin/$u" ]; then \
                     rm $v/bin/$u \
