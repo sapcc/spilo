@@ -364,8 +364,8 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     else \
         EXTRAS=",etcd,consul,zookeeper,aws" \
         && apt-get install -y python3-dnspython python3-kazoo python3-meld3 \
-        pip3 install boto && \
-        pip3 install envdir git+https://github.com/sapcc/wal-e@ccloud#egg=aws \
+        && pip3 install boto \
+        && pip3 install envdir git+https://github.com/sapcc/wal-e@ccloud#egg=aws \
                 'git+https://github.com/Supervisor/supervisor.git@master#egg=supervisor' \
                 'git+https://github.com/zalando/pg_view.git@master#egg=pg-view' \
 
