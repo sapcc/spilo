@@ -101,7 +101,8 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     fi \
 
     && apt-get install -y libcurl3 libevent-2.0 libevent-pthreads-2.0 python3.5 $BUILD_PACKAGES \
-
+    # make sure we use https protocol:
+    && git config --global url.https://github.com/.insteadOf git://github.com/ \
     # prepare 3rd sources
     && curl -s -L https://github.com/CyberDem0n/bg_mon/archive/$BG_MON_COMMIT.tar.gz | tar xz \
 
@@ -117,7 +118,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     && perl -ne 'print unless /PG_TRY/ .. /PG_CATCH/' pgextwlist/pgextwlist.c > pgextwlist.c.f \
     && egrep -v '(PG_END_TRY|EmitWarningsOnPlaceholders)' pgextwlist.c.f > pgextwlist/pgextwlist.c \
 
-    && git clone git://www.sigaev.ru/plantuner.git \
+    && git clone https://github.com/sapcc/plantuner.git \
 
     && git clone https://github.com/reorg/pg_repack.git \
     && cd pg_repack \
@@ -380,7 +381,8 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     else \
         EXTRAS=",etcd,consul,zookeeper,aws" \
         && apt-get install -y python3-dnspython python3-kazoo python3-meld3 \
-        && pip3 install envdir wal-e[aws,google]==$WALE_VERSION \
+        && pip3 install boto \
+        && pip3 install envdir git+https://github.com/sapcc/wal-e@ccloud#egg=aws \
                 'git+https://github.com/Supervisor/supervisor.git@master#egg=supervisor' \
                 'git+https://github.com/zalando/pg_view.git@master#egg=pg-view' \
 

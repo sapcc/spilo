@@ -249,7 +249,7 @@ postgresql:
     envdir: {{WALE_ENV_DIR}}
     threshold_megabytes: {{WALE_BACKUP_THRESHOLD_MEGABYTES}}
     threshold_backup_size_percentage: {{WALE_BACKUP_THRESHOLD_PERCENTAGE}}
-    use_iam: 1
+    use_iam: 0
     retries: 2
     no_master: 1
   basebackup_fast_xlog:
@@ -412,7 +412,7 @@ def get_placeholders(provider):
     placeholders.setdefault('postgresql', {})
     placeholders['postgresql'].setdefault('parameters', {})
     placeholders['postgresql']['parameters']['archive_command'] = \
-        'envdir "{0}" wal-e --aws-instance-profile wal-push "%p"'.format(placeholders['WALE_ENV_DIR']) \
+        'envdir "{0}" wal-e wal-push "%p"'.format(placeholders['WALE_ENV_DIR']) \
         if placeholders['USE_WALE'] else '/bin/true'
 
     if os.path.exists(MEMORY_LIMIT_IN_BYTES_PATH):
@@ -489,15 +489,17 @@ def write_wale_environment(placeholders, provider, prefix, overwrite):
 
     if not os.path.exists(wale['WALE_ENV_DIR']):
         os.makedirs(wale['WALE_ENV_DIR'])
+    if not os.path.exists(placeholders['WALE_ENV_DIR']):
+        os.makedirs(placeholders['WALE_ENV_DIR'])
 
     if wale.get('WAL_S3_BUCKET'):
         write_file('s3://{WAL_S3_BUCKET}/spilo/{WAL_BUCKET_SCOPE_PREFIX}{SCOPE}{WAL_BUCKET_SCOPE_SUFFIX}/wal/'.format(**wale),
                    os.path.join(wale['WALE_ENV_DIR'], 'WALE_S3_PREFIX'), overwrite)
-        match = re.search(r'.*(eu-\w+-\d+)-.*', wale['WAL_S3_BUCKET'])
+        match = re.search(r'.*(eu-\w+-\d+).*', wale['WAL_S3_BUCKET'])
         if match:
             region = match.group(1)
         else:
-            region = placeholders['instance_data']['zone'][:-1]
+            region = os.environ.get('AWS_REGION')
         write_file('https+path://s3-{}.amazonaws.com:443'.format(region),
                    os.path.join(wale['WALE_ENV_DIR'], 'WALE_S3_ENDPOINT'), overwrite)
         if os.environ.get('AWS_ACCESS_KEY_ID'):
@@ -505,6 +507,13 @@ def write_wale_environment(placeholders, provider, prefix, overwrite):
                    os.path.join(placeholders['WALE_ENV_DIR'], 'AWS_ACCESS_KEY_ID'), overwrite)
             write_file(os.environ.get('AWS_SECRET_ACCESS_KEY'),
                    os.path.join(placeholders['WALE_ENV_DIR'], 'AWS_SECRET_ACCESS_KEY'), overwrite)
+            write_file(os.environ.get('AWS_ACCESS_KEY_ID'),
+                   os.path.join(wale['WALE_ENV_DIR'], 'AWS_ACCESS_KEY_ID'), overwrite)
+            write_file(os.environ.get('AWS_SECRET_ACCESS_KEY'),
+                   os.path.join(wale['WALE_ENV_DIR'], 'AWS_SECRET_ACCESS_KEY'), overwrite)
+        if os.environ.get('AWS_REGION'):
+            write_file(os.environ.get('AWS_REGION'),
+                   os.path.join(placeholders['WALE_ENV_DIR'], 'AWS_REGION'), overwrite)
     elif wale.get('WAL_GCS_BUCKET'):
         write_file('gs://{WAL_GCS_BUCKET}/spilo/{WAL_BUCKET_SCOPE_PREFIX}{SCOPE}{WAL_BUCKET_SCOPE_SUFFIX}/wal/'.format(**wale),
                    os.path.join(wale['WALE_ENV_DIR'], 'WALE_GS_PREFIX'), overwrite)
