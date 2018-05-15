@@ -90,7 +90,7 @@ fi
 
 readonly SERVICE=s3
 readonly REQUEST=aws4_request
-readonly HOST=$BUCKET.$S3_HOST
+readonly HOST=$S3_HOST
 readonly TIME=$(date +%Y%m%dT%H%M%SZ)
 readonly DATE=${TIME%T*}
 readonly DRSR="$DATE/$AWS_REGION/$SERVICE/$REQUEST"
@@ -119,7 +119,7 @@ fi
 function s3_get() {
     local segment=$1
     local destination=$2
-    local FILE=$BUCKET_PATH/wal_005/$segment.lzo
+    local FILE=/$BUCKET$BUCKET_PATH/wal_005/$segment.lzo
     local CANONICAL_REQUEST="GET\n$FILE\n\nhost:$HOST\nx-amz-content-sha256:$EMPTYHASH\nx-amz-date:$TIME\n$REQUEST_TOKEN\n$SIGNED_HEADERS\n$EMPTYHASH"
     local CANONICAL_REQUEST_HASH=$(echo -en $CANONICAL_REQUEST | openssl dgst -sha256 | sed 's/^.* //')
     local STRING_TO_SIGN="AWS4-HMAC-SHA256\n$TIME\n$DRSR\n$CANONICAL_REQUEST_HASH"
