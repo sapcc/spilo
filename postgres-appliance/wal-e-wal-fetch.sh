@@ -71,7 +71,7 @@ else
 fi
 
 if [[ -z $AWS_REGION ]]; then
-    if [[ ! -z $WALE_S3_ENDPOINT && $WALE_S3_ENDPOINT =~ ^([a-z\+]{2,10}://)?(s3-([^\.]+)[^:\/?]+) ]]; then
+    if [[ ! -z $WALE_S3_ENDPOINT && $WALE_S3_ENDPOINT =~ ^([a-z\+]{2,10}://)?(objectstore-3.([^\.]+)[^:\/?]+) ]]; then
         S3_HOST=${BASH_REMATCH[2]}
         AWS_REGION=${BASH_REMATCH[3]}
     elif [[ $AWS_INSTANCE_PROFILE == 1 ]]; then
