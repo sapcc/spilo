@@ -67,10 +67,10 @@ ENV PGVERSION="$PGVERSION" \
     POSTGIS_VERSION=2.4 \
     BG_MON_COMMIT=57f50fd9b92a9ed3cdb185118fbce27d4d56984c \
     DECODERBUFS_COMMIT=e2da72713909d4315aa63f46819412ec4f9f6a42 \
-    SET_USER=REL1_4_0 \
+    SET_USER=REL1_6_0 \
     PLPGSQL_CHECK=v1.2.2 \
     PLPROFILER=REL3_2 \
-    TIMESCALEDB=0.9.1 \
+    TIMESCALEDB=0.9.2 \
     PGEXTWLIST=v1.6 \
     PAM_OAUTH2=v1.0
 
@@ -120,10 +120,6 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
     && git clone https://github.com/sapcc/plantuner.git \
 
-    && git clone https://github.com/reorg/pg_repack.git \
-    && cd pg_repack \
-    && curl -sL https://github.com/reorg/pg_repack/pull/176.diff | patch -p1 \
-
     && for version in ${PGOLDVERSIONS} ${PGVERSION}; do \
             sed -i "s/ main.*$/ main $version/g" /etc/apt/sources.list.d/pgdg.list \
             && apt-get update \
@@ -141,12 +137,8 @@ RUN export DEBIAN_FRONTEND=noninteractive \
             && apt-get install --allow-downgrades -y postgresql-contrib-${version} $EXTRAS \
                         postgresql-${version}-plproxy postgresql-plpython3-${version} \
                         postgresql-${version}-pldebugger postgresql-${version}-hypopg \
-                        postgresql-${version}-pgq3 libpq5=$version* \
-                        libpq-dev=$version* postgresql-server-dev-${version} \
-
-            # Fix for https://github.com/zalando/spilo/issues/228 
-            && ln -snf /usr/lib/postgresql/${version}/lib/libpgcommon.a /usr/lib/x86_64-linux-gnu/libpgcommon.a \
-            && ln -snf /usr/lib/postgresql/${version}/lib/libpgport.a /usr/lib/x86_64-linux-gnu/libpgport.a \
+                        postgresql-${version}-repack postgresql-${version}-pgq3 \
+                        libpq5=$version* libpq-dev=$version* postgresql-server-dev-${version} \
 
             && if [ "$DEMO" != "true" ]; then \
                 apt-get install -y postgresql-${version}-plv8 \
@@ -169,9 +161,6 @@ RUN export DEBIAN_FRONTEND=noninteractive \
                 make -C $n USE_PGXS=1 clean install-strip; \
             done \
 
-            && make -C pg_repack USE_PGXS=1 clean install \
-            && strip /usr/lib/postgresql/$version/lib/pg_repack.so /usr/lib/postgresql/$version/bin/pg_repack \
-
             && if [ "$version" != "9.3" ] && [ "$DEMO" != "true" ]; then \
                 make -C postgres-decoderbufs-$DECODERBUFS_COMMIT clean install-strip; \
             fi \
@@ -190,7 +179,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
                 && rm -fr build \
                 && ./bootstrap \
                 && make -C build install \
-                && strip /usr/lib/postgresql/$version/lib/timescaledb.so; \
+                && strip /usr/lib/postgresql/$version/lib/timescaledb*.so; \
             fi \
 
             && apt-get purge -y libpq-dev=$version*; \
