@@ -450,7 +450,7 @@ FROM base
 
 MAINTAINER Alexander Kukushkin <alexander.kukushkin@zalando.de>
 
-EXPOSE 5432 8008 8080
+EXPOSE 5432 8008 8080 9200
 
 ENV LC_ALL=en_US.utf-8 \
     PATH=$PATH:/usr/lib/postgresql/${PGVERSION}/bin \
