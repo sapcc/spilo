@@ -391,6 +391,8 @@ RUN export DEBIAN_FRONTEND=noninteractive \
         && echo 4.0.0.dev0 > /usr/local/lib/python3.5/dist-packages/supervisor/version.txt; \
     fi \
     && pip3 install "patroni[kubernetes$EXTRAS]==$PATRONIVERSION" \
+    && pip3 install croniter \
+    && pip3 install prometheus_client \
 
     # use system tzdata to save space
     && mv /usr/local/lib/python3.5/dist-packages/pytz/zoneinfo/tzdata.zi /usr/share/zoneinfo/ \
