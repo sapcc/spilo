@@ -18,8 +18,8 @@ LOG = logging.getLogger(__name__)
 
 class WaleMetricsCollector():
     def collect(self):
-        self.time_metrics = GaugeMetricFamily("postgres_wale_backup_time", "Shows the timestamp of the last successful postgres backup")
-        self.success_metrics = GaugeMetricFamily("postgres_wales_backup_success", "Shows if postgres backup is working as scheduled")
+        self.time_metrics = GaugeMetricFamily("pg_cluster_wale_backup_time", "Shows the timestamp of the last successful postgres backup")
+        self.success_metrics = GaugeMetricFamily("pg_cluster_wale_backup_success", "Shows if postgres backup is working as scheduled")
         self._getBackupList()
         yield self.time_metrics
         yield self.success_metrics
