@@ -18,8 +18,8 @@ LOG = logging.getLogger(__name__)
 
 class WaleMetricsCollector():
     def collect(self):
-        self.time_metrics = GaugeMetricFamily("postgres_s3_backup", "Shows the timestamp of the last postgres backup")
-        self.success_metrics = GaugeMetricFamily("postgres_s3_success", "Shows if postgres backup is successful")
+        self.time_metrics = GaugeMetricFamily("postgres_wale_backup_time", "Shows the timestamp of the last successful postgres backup")
+        self.success_metrics = GaugeMetricFamily("postgres_wales_backup_success", "Shows if postgres backup is working as scheduled")
         self._getBackupList()
         yield self.time_metrics
         yield self.success_metrics
@@ -29,8 +29,8 @@ class WaleMetricsCollector():
 
         try:
             schedule = os.environ["BACKUP_SCHEDULE"]
-            #a backup takes ~ 10 secs to complete. So make sure we are not checking when a cron job is currently running, rather after it should be completed
-            iter = croniter(schedule, datetime.now() - timedelta(seconds=10))
+            #a backup takes ~ 15  secs to complete. So make sure we are not checking when a cron job is currently running, rather after it should be completed
+            iter = croniter(schedule, datetime.now() - timedelta(seconds=15))
             last_expected = iter.get_prev(datetime)
 
             p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
