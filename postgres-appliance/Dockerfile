@@ -106,9 +106,12 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
         # install pam_oauth2.so
         && git clone -b $PAM_OAUTH2 https://github.com/CyberDem0n/pam-oauth2.git \
-        && sed 's/git/https/g' .gitmodules \
+        && cd pam-oauth2 \
+        && sed -i.bak 's/jsmn.git/jsmn/' .gitmodules \
+        && sed -i.bak 's/git:/https:/' .gitmodules \
         && git submodule update --init --recursive \
         && make -C pam-oauth2 install \
+        && cd .. \
 
         # prepare 3rd sources
         && curl -sL https://github.com/debezium/postgres-decoderbufs/archive/$DECODERBUFS_COMMIT.tar.gz | tar xz \
