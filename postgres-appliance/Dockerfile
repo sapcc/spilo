@@ -1,4 +1,5 @@
-FROM ubuntu:16.04 AS base
+
+FROM ubuntu:18.04 AS base
 
 MAINTAINER Alexander Kukushkin <alexander.kukushkin@zalando.de>
 
@@ -6,15 +7,13 @@ ARG DEMO=false
 ENV DEMO=$DEMO
 
 RUN export DEBIAN_FRONTEND=noninteractive \
-    && apt-get purge -y --allow-remove-essential systemd \
-
     && echo 'APT::Install-Recommends "0";' > /etc/apt/apt.conf.d/01norecommend \
     && echo 'APT::Install-Suggests "0";' >> /etc/apt/apt.conf.d/01norecommend \
 
     && apt-get update \
     && apt-get upgrade -y \
 
-    && apt-get install -y curl ca-certificates less locales jq vim-tiny \
+    && apt-get install -y curl ca-certificates less locales jq vim-tiny gnupg1 \
 
     && if [ "$DEMO" != "true" ]; then \
         apt-get install -y cron \
@@ -65,122 +64,138 @@ ARG PGVERSION="10"
 ENV PGVERSION="$PGVERSION" \
     PGOLDVERSIONS="$PGOLDVERSIONS" \
     POSTGIS_VERSION=2.4 \
-    BG_MON_COMMIT=57f50fd9b92a9ed3cdb185118fbce27d4d56984c \
+    BG_MON_COMMIT=120b86c4fc4503aa640fc7f2f9a5259b10192ba3 \
     DECODERBUFS_COMMIT=e2da72713909d4315aa63f46819412ec4f9f6a42 \
-    SET_USER=REL1_6_0 \
-    PLPGSQL_CHECK=v1.2.2 \
+    SET_USER=REL1_6_1 \
+    PLPGSQL_CHECK=v1.2.3 \
     PLPROFILER=REL3_2 \
-    TIMESCALEDB=0.9.2 \
-    PGEXTWLIST=v1.6 \
+    TIMESCALEDB=0.11.0 \
     PAM_OAUTH2=v1.0
 
 RUN export DEBIAN_FRONTEND=noninteractive \
     && set -ex \
     && apt-get update \
     && cd /builddeps \
-    && BUILD_PACKAGES="devscripts build-essential equivs gcc automake autogen libtool cmake pgxnclient libedit-dev zlib1g-dev libssl-dev libselinux1-dev libkrb5-dev libxslt1-dev libxml2-dev libpam0g-dev libcurl4-openssl-dev pkg-config libevent-dev git dh-autoreconf python-docutils" \
+
+    && BUILD_PACKAGES="devscripts build-essential fakeroot debhelper git gcc libc6-dev make libevent-dev" \
     && if [ "$DEMO" = "true" ]; then \
-        PGOLDVERSIONS=""; \
+        PGOLDVERSIONS="" \
+        && apt-get install -y $BUILD_PACKAGES; \
     else \
-        BUILD_PACKAGES="$BUILD_PACKAGES libprotobuf-c-dev liblwgeom-dev libproj-dev" \
+        BUILD_PACKAGES="$BUILD_PACKAGES equivs pgxnclient cmake libssl-dev zlib1g-dev libprotobuf-c-dev liblwgeom-dev libproj-dev libxslt1-dev libxml2-dev libpam0g-dev libkrb5-dev libedit-dev libselinux1-dev libcurl4-openssl-dev libc-ares-dev python-docutils flex bison asciidoc liblua5.1-dev libv8-dev markdown" \
+# debezium-decoderbufs: libprotobuf-c-dev liblwgeom-dev libproj-dev
+# pgbouncer: libc-ares-dev python-docutils
+# pg_rewind: libxslt1-dev libxml2-dev libpam0g-dev libkrb5-dev libedit-dev libselinux1-dev
+# plv8: libv8-dev markdown
+
+        && apt-get install -y $BUILD_PACKAGES libprotobuf-c1 libcurl4 \
+
         && if [ "$WITH_PERL" != "true" ]; then \
-            apt-get install -y equivs \
-            && version=$(apt-cache show perl | sed -n 's/^Version: //p' | sort -rV | head -n 1) \
-            && echo "Section: misc\nPriority: optional\nStandards-Version: 3.9.2\nPackage: perl\nReplaces: perl-base\nVersion: $version\nDescription: perl" > perl \
-            && equivs-build perl \
-            && dpkg -i perl*.deb; \
+            version=$(apt-cache show perl | sed -n 's/^Version: //p' | sort -rV | head -n 1) \
+            && echo "Section: misc\nPriority: optional\nStandards-Version: 3.9.8\nPackage: perl\nSection:perl\nMulti-Arch: allowed\nReplaces: perl-base\nVersion: $version\nDescription: perl" > perl \
+            && equivs-build perl; \
         fi \
 
-        && dpkg -i libcgal[^-]*_amd64.deb \
-                    libgdal[^-]*_amd64.deb \
-                    libsfcgal[^-]*_amd64.deb \
-                || apt-get -y -f install \
-        && apt-get install -y libprotobuf-c1 \
+        && for p in python3-keyring python3-docutils ieee-data; do \
+            version=$(apt-cache show $p | sed -n 's/^Version: //p' | sort -rV | head -n 1) \
+            && echo "Section: misc\nPriority: optional\nStandards-Version: 3.9.8\nPackage: $p\nVersion: $version\nDescription: $p" > $p \
+            && equivs-build $p; \
+        done \
 
-        && curl -s -L https://github.com/debezium/postgres-decoderbufs/archive/$DECODERBUFS_COMMIT.tar.gz | tar xz; \
+        && dpkg -i *.deb || apt-get -y -f install \
+
+        # install pam_oauth2.so
+        && git clone -b $PAM_OAUTH2 --recurse-submodules https://github.com/CyberDem0n/pam-oauth2.git \
+        && make -C pam-oauth2 install \
+
+        # prepare 3rd sources
+        && curl -sL https://github.com/debezium/postgres-decoderbufs/archive/$DECODERBUFS_COMMIT.tar.gz | tar xz \
+
+        && git clone -b $PLPGSQL_CHECK https://github.com/okbob/plpgsql_check.git \
+
+        && git clone -b $PLPROFILER https://bitbucket.org/openscg/plprofiler.git \
+
+        && git clone -b $TIMESCALEDB https://github.com/timescale/timescaledb.git \
+
+        && git clone git://www.sigaev.ru/plantuner.git; \
     fi \
 
-    && apt-get install -y libcurl3 libevent-2.0 libevent-pthreads-2.0 python3.5 $BUILD_PACKAGES \
-    # make sure we use https protocol:
-    && git config --global url.https://github.com/.insteadOf git://github.com/ \
-    # prepare 3rd sources
-    && curl -s -L https://github.com/CyberDem0n/bg_mon/archive/$BG_MON_COMMIT.tar.gz | tar xz \
+    && curl -sL https://github.com/CyberDem0n/bg_mon/archive/$BG_MON_COMMIT.tar.gz | tar xz \
 
     && git clone -b $SET_USER https://github.com/pgaudit/set_user.git \
 
-    && git clone -b $PLPGSQL_CHECK https://github.com/okbob/plpgsql_check.git \
-
-    && git clone -b $PLPROFILER https://bitbucket.org/openscg/plprofiler.git \
-
-    && git clone -b $TIMESCALEDB https://github.com/timescale/timescaledb.git \
-
-    && git clone -b $PGEXTWLIST https://github.com/dimitri/pgextwlist.git \
-    && perl -ne 'print unless /PG_TRY/ .. /PG_CATCH/' pgextwlist/pgextwlist.c > pgextwlist.c.f \
-    && egrep -v '(PG_END_TRY|EmitWarningsOnPlaceholders)' pgextwlist.c.f > pgextwlist/pgextwlist.c \
-
-    && git clone https://github.com/sapcc/plantuner.git \
+    && apt-get install -y libevent-2.1 libevent-pthreads-2.1 python3.6 \
 
     && for version in ${PGOLDVERSIONS} ${PGVERSION}; do \
             sed -i "s/ main.*$/ main $version/g" /etc/apt/sources.list.d/pgdg.list \
             && apt-get update \
 
-            && if [ $version = "9.3" ]; then \
-                EXTRAS=""; \
-            else \
-                EXTRAS="postgresql-${version}-amcheck" \
-                && if [ $version != "9.4" ]; then \
-                    EXTRAS="$EXTRAS postgresql-${version}-cron"; \
+            && if [ "$DEMO" != "true" ]; then \
+                EXTRAS="postgresql-pltcl-${version} \
+                        postgresql-${version}-hypopg \
+                        postgresql-${version}-pgq3 \
+                        postgresql-${version}-pldebugger \
+                        postgresql-${version}-pllua \
+                        postgresql-${version}-plproxy \
+                        postgresql-${version}-postgis-${POSTGIS_VERSION} \
+                        postgresql-${version}-postgis-${POSTGIS_VERSION}-scripts \
+                        postgresql-${version}-repack" \
+                # postgresql-${version}-plv8 -- rebuild package
+                && if [ "$WITH_PERL" = "true" ]; then \
+                    EXTRAS="$EXTRAS postgresql-plperl-${version}"; \
+                fi \
+                && if [ $version != "9.3" ]; then \
+                    EXTRAS="$EXTRAS postgresql-${version}-amcheck postgresql-${version}-pglogical postgresql-${version}-wal2json" \
+                    # postgresql-${version}-partman -- rebuild packages
+                    && if [ $version != "9.4" ]; then \
+                        EXTRAS="$EXTRAS postgresql-${version}-pgl-ddl-deploy"; \
+                    fi; \
                 fi; \
+            fi \
+
+            && if [ $version != "9.3" ] && [ $version != "9.4" ]; then \
+                EXTRAS="$EXTRAS postgresql-${version}-cron"; \
             fi \
 
             # Install PostgreSQL binaries, contrib, plproxy and multiple pl's
-            && apt-get install --allow-downgrades -y postgresql-contrib-${version} $EXTRAS \
-                        postgresql-${version}-plproxy postgresql-plpython3-${version} \
-                        postgresql-${version}-pldebugger postgresql-${version}-hypopg \
-                        postgresql-${version}-repack postgresql-${version}-pgq3 \
-                        libpq5=$version* libpq-dev=$version* postgresql-server-dev-${version} \
+            && apt-get install --allow-downgrades -y postgresql-contrib-${version} \
+                        postgresql-plpython3-${version} libpq5=$version* $EXTRAS \
+                        libpq-dev=$version* postgresql-server-dev-${version} \
 
+            # Install 3rd party stuff
             && if [ "$DEMO" != "true" ]; then \
-                apt-get install -y postgresql-${version}-plv8 \
-                            postgresql-${version}-postgis-${POSTGIS_VERSION} \
-                            postgresql-${version}-postgis-${POSTGIS_VERSION}-scripts \
-                            postgresql-pltcl-${version} postgresql-${version}-pllua \
-                && if [ "$WITH_PERL" = "true" ]; then \
-                    apt-get install -y postgresql-plperl-${version}; \
+                for extension in quantile trimmed_aggregates; do \
+                    pgxn install $extension \
+                    && strip /usr/lib/postgresql/$version/lib/$extension.so; \
+                done \
+
+                && if [ "$version" = "9.6" ] || [ "$version" = "10" ]; then \
+                    cd timescaledb \
+                    && rm -fr build \
+                    && ./bootstrap \
+                    && make -C build install \
+                    && strip /usr/lib/postgresql/$version/lib/timescaledb*.so \
+                    && cd ..; \
+                fi \
+
+                # Install pg_rewind on 9.3 and 9.4
+                && if [ "$version" = "9.3" ] || [ "$version" = "9.4" ]; then \
+                    REWIND_VER=REL$(echo $version | sed 's/\./_/')_STABLE \
+                    && apt-get source postgresql-${version} \
+                    && curl -sL https://github.com/vmware/pg_rewind/archive/${REWIND_VER}.tar.gz | tar xz \
+                    && make -C pg_rewind-${REWIND_VER} USE_PGXS=1 top_srcdir=../$(ls -d postgresql-${version}-*) install-strip \
+                    && rm -fr pg_rewind-${REWIND_VER} postgresql-${version}*; \
+                fi \
+
+                && EXTRA_EXTENSIONS="plpgsql_check plprofiler plantuner" \
+                && if [ "$version" != "9.3" ]; then \
+                    EXTRA_EXTENSIONS="$EXTRA_EXTENSIONS postgres-decoderbufs-$DECODERBUFS_COMMIT"; \
                 fi; \
             fi \
 
-            # Install 3rd stuff
-            && for extension in quantile trimmed_aggregates; do \
-                pgxn install $extension \
-                && strip /usr/lib/postgresql/$version/lib/$extension.so; \
-            done \
-
-            && cd /builddeps \
-            && for n in bg_mon-${BG_MON_COMMIT} set_user plpgsql_check plprofiler pgextwlist plantuner; do \
+            && for n in bg_mon-${BG_MON_COMMIT} set_user $EXTRA_EXTENSIONS; do \
                 make -C $n USE_PGXS=1 clean install-strip; \
             done \
-
-            && if [ "$version" != "9.3" ] && [ "$DEMO" != "true" ]; then \
-                make -C postgres-decoderbufs-$DECODERBUFS_COMMIT clean install-strip; \
-            fi \
-
-            # Install pg_rewind on 9.3 and 9.4
-            && if [ "$version" = "9.3" ] || [ "$version" = "9.4" ]; then \
-                REWIND_VER=REL$(echo $version | sed 's/\./_/')_STABLE \
-                && apt-get source postgresql-${version} \
-                && curl -s -L https://github.com/vmware/pg_rewind/archive/${REWIND_VER}.tar.gz | tar xz \
-                && make -C pg_rewind-${REWIND_VER} USE_PGXS=1 top_srcdir=../$(ls -d postgresql-${version}-*) install-strip \
-                && rm -fr pg_rewind-${REWIND_VER} postgresql-${version}*; \
-            fi \
-
-            && if [ "$version" = "9.6" ] || [ "$version" = "10" ]; then \
-                cd /builddeps/timescaledb \
-                && rm -fr build \
-                && ./bootstrap \
-                && make -C build install \
-                && strip /usr/lib/postgresql/$version/lib/timescaledb*.so; \
-            fi \
 
             && apt-get purge -y libpq-dev=$version*; \
     done \
@@ -188,41 +203,44 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     && apt-get install -y skytools3-ticker pspg \
 
     && if [ "$DEMO" != "true" ]; then \
-        cd /builddeps \
-
         # patch, build and install pgbouncer
-        && apt-get source pgbouncer \
+        apt-get source pgbouncer \
         && cd $(ls -d pgbouncer-*) \
         # Set last_connect_time for pool only when it really failed to connect
         && curl -sL https://github.com/pgbouncer/pgbouncer/pull/127.diff | patch -p1 \
         # Increase password size
         && sed -i 's/\(MAX_PASSWORD\t\).*/\11024/' include/bouncer.h \
+        && sed 's/\(SEND_wrap(\)512\(, pktbuf_write_PasswordMessage, res, sk, psw)\)/\11024\2/' include/pktbuf.h \
         && debuild -b -uc -us \
         && dpkg -i ../pgbouncer_*.deb \
         && cd .. \
 
-        # patch, build and install partman (get rid from python2.7 dependency)
-        && apt-get install -y postgresql-server-dev-all \
-        && apt-get source postgresql-${version}-partman \
-        && cd $(ls -d pg-partman-*) \
-        && sed -i 's|/usr/bin/env python|/usr/bin/env python3|' bin/*.py \
-        && sed -i 's|python|python3|g' debian/control.in \
+        && PACKAGES="partman plv8"; \
+    fi \
+
+    # build and install missing packages
+    && apt-get install -y postgresql-server-dev-all \
+    && for pkg in pgextwlist $PACKAGES; do \
+        apt-get source postgresql-10-${pkg} \
+        && cd $(ls -d *${pkg}-*) \
+        && if [ "$pkg" = "partman" ]; then \
+            # get rid from python2.7 dependency
+            sed -i 's|/usr/bin/env python|/usr/bin/env python3|' bin/*.py \
+            && sed -i 's|python|python3|g' debian/control.in; \
+        elif [ "$pkg" = "pgextwlist" ]; then \
+            # make it possible to use it from shared_preload_libraries
+            perl -ne 'print unless /PG_TRY/ .. /PG_CATCH/' pgextwlist.c > pgextwlist.c.f \
+            && egrep -v '(PG_END_TRY|EmitWarningsOnPlaceholders)' pgextwlist.c.f > pgextwlist.c; \
+        fi \
+        && pg_buildext updatecontrol \
         && debuild -b -uc -us \
         && cd .. \
         && for version in ${PGOLDVERSIONS} ${PGVERSION}; do \
-            for deb in postgresql-${version}-partman_*.deb; do \
+            for deb in postgresql-${version}-${pkg}_*.deb; do \
                 if [ -f $deb ]; then dpkg -i $deb; fi; \
             done; \
         done; \
-    fi \
-
-    # install pam_oauth2.so
-    && git clone -b $PAM_OAUTH2 --recurse-submodules https://github.com/CyberDem0n/pam-oauth2.git \
-    && make -C pam-oauth2 install \
-    
-    # install postgres_exporter (Prometheus)
-    && curl -L https://github.com/wrouesnel/postgres_exporter/releases/download/v0.4.4/postgres_exporter_v0.4.4_linux-amd64.tar.gz \
-        | tar xz -C /bin --strip=1 --wildcards --no-anchored postgres_exporter \
+    done \
 
     # Clean up
     && apt-get purge -y ${BUILD_PACKAGES} postgresql-server-dev-* libmagic1 bsdmainutils \
@@ -255,7 +273,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
             done; \
         done \
 
-        && for e in pgq plproxy postgis_tiger_geocoder postgis_topology postgis_sfcgal address_standardizer address_standardizer_data_us; do \
+        && for e in pgq plproxy postgis_tiger_geocoder postgis_topology address_standardizer address_standardizer_data_us; do \
             orig=$(ls -1 $e--*--*.sql 2> /dev/null | head -n1) \
             && if [ "x$orig" != "x" ]; then \
                 for f in $e--*--*.sql; do \
@@ -345,8 +363,6 @@ RUN export DEBIAN_FRONTEND=noninteractive \
             /usr/share/info \
             /usr/share/locale/?? \
             /usr/share/locale/??_?? \
-            /usr/lib/x86_64-linux-gnu/libpgcommon.a \
-+           /usr/lib/x86_64-linux-gnu/libpgport.a \
             /usr/share/postgresql/*/man \
             /etc/pgbouncer/* \
             /usr/lib/postgresql/*/bin/createdb \
@@ -360,52 +376,59 @@ RUN export DEBIAN_FRONTEND=noninteractive \
             /usr/lib/postgresql/*/bin/pltcl_*
 
 # Install patroni and WAL-e
-ENV PATRONIVERSION=1.4.4
+ENV PATRONIVERSION=1.4.6
 ENV WALE_VERSION=1.1.0
 RUN export DEBIAN_FRONTEND=noninteractive \
     && set -ex \
-    && BUILD_PACKAGES="python3-pip python3-wheel python3-dev gcc git" \
+    && BUILD_PACKAGES="python3-pip python3-wheel python3-dev git patchutils" \
     && apt-get update \
-    && apt-get install -y python3 python3-click python3-yaml python3-six python3-pystache python3-prettytable \
-                python3-psycopg2 python3-pyasn1-modules python3-rsa python3-dateutil ${BUILD_PACKAGES} \
 
-    && pip3 install setuptools --upgrade \
+    # install most of the patroni dependencies from ubuntu packages
+    && apt-get install -s patroni \
+            | sed -n -e "/^Inst patroni /d" \
+                    -e 's/^Inst \([^ ]\+\) .*$/\1/p' \
+            | xargs apt-get install -y ${BUILD_PACKAGES} \
+					python3-pystache python3-cachetools \
+					python3-rsa python3-pyasn1-modules \
 
-    && if [ "$DEMO" = "true" ]; then \
-        EXTRAS=""; \
-    else \
+    && pip3 install setuptools \
+
+    && if [ "$DEMO" != "true" ]; then \
         EXTRAS=",etcd,consul,zookeeper,aws" \
-        && apt-get install -y python3-dnspython python3-kazoo python3-meld3 \
-        && pip3 install boto \
+        && apt-get install -y python3-etcd python3-consul python3-kazoo python3-meld3 \
+			python3-boto python3-gevent python3-greenlet python3-protobuf \
+			python3-websocket python3-requests-oauthlib python3-swiftclient \
+
+        && find /usr/share/python-babel-localedata/locale-data -type f ! -name 'en_US*.dat' -delete \
+
         && pip3 install envdir git+https://github.com/sapcc/wal-e@ccloud#egg=aws \
                 'git+https://github.com/Supervisor/supervisor.git@master#egg=supervisor' \
                 'git+https://github.com/zalando/pg_view.git@master#egg=pg-view' \
 
+        && cd /usr/local/lib/python3.6/dist-packages \
+
         # pg_view installs useless pytest
-        && pip3 uninstall -y attrs pluggy pytest py \
-        && sed -i '/^pytest/d' /usr/local/lib/python3.5/dist-packages/pg_view-*/requires.txt \
+        && sed -i '/^pytest/d' pg_view-*/requires.txt \
+        && pip3 uninstall -y atomicwrites attrs more_itertools pluggy pytest py \
 
         # https://github.com/wal-e/wal-e/issues/318
-        && sed -i 's/^\(    for i in range(0,\) num_retries):.*/\1 100):/g' /usr/local/lib/python3.5/dist-packages/boto/utils.py \
+        && sed -i 's/^\(    for i in range(0,\) num_retries):.*/\1 100):/g' /usr/lib/python3/dist-packages/boto/utils.py \
 
-        && echo 4.0.0.dev0 > /usr/local/lib/python3.5/dist-packages/supervisor/version.txt; \
+        # https://github.com/wal-e/wal-e/pull/384
+        && curl -sL https://github.com/wal-e/wal-e/pull/384.diff | patch -p1 \
+
+        # https://github.com/wal-e/wal-e/pull/392
+        && curl -sL https://github.com/wal-e/wal-e/pull/392.diff | patch -p1 \
+
+        && echo 4.0.0.dev0 > supervisor/version.txt; \
     fi \
     && pip3 install "patroni[kubernetes$EXTRAS]==$PATRONIVERSION" \
-    && pip3 install croniter \
-    && pip3 install prometheus_client \
 
-    # use system tzdata to save space
-    && mv /usr/local/lib/python3.5/dist-packages/pytz/zoneinfo/tzdata.zi /usr/share/zoneinfo/ \
-    && rm -fr /usr/local/lib/python3.5/dist-packages/pytz/zoneinfo \
-    && ln -s /usr/share/zoneinfo /usr/local/lib/python3.5/dist-packages/pytz/zoneinfo \
-
-    && for d in /usr/lib/python3 /usr/local/lib/python3.5; do \
+    && for d in /usr/local/lib/python3.6 /usr/lib/python3; do \
         cd $d/dist-packages \
         && find . -type d -name tests | xargs rm -fr \
         && find . -type f -name 'test_*.py*' -delete; \
     done \
-    && find . -type f -name '*.so' -exec strip {} \; \
-    && find . -type f -name '*.c' -delete \
     && find . -type f -name 'unittest_*.py*' -delete \
     && find . -type f -name '*_test.py' -delete \
     && find . -type f -name '*_test.cpython*.pyc' -delete \
@@ -442,9 +465,10 @@ RUN set -ex \
         && XZ_OPT=-e9v tar -X /exclude -cpJf a.tar.xz $save_dirs \
         && rm -fr /usr/local/lib/python* \
         && /bin/busybox sh -c "(find $save_dirs -not -type d && cat /exclude /exclude && echo exclude) | sort | uniq -u | xargs /bin/busybox rm" \
-#        && /bin/busybox --install -s \
+        && /bin/busybox --install -s \
         && /bin/busybox sh -c "find $save_dirs -type d -depth -exec rmdir -p {} \; 2> /dev/null"; \
     fi
+
 
 FROM base
 
@@ -457,7 +481,8 @@ ENV LC_ALL=en_US.utf-8 \
     PGHOME=/home/postgres
 
 ENV WALE_ENV_DIR=$PGHOME/etc/wal-e.d/env \
-    PGROOT=$PGHOME/pgdata/pgroot
+    PGROOT=$PGHOME/pgdata/pgroot \
+    LOG_ENV_DIR=$PGHOME/etc/log.d/env
 
 ENV PGDATA=$PGROOT/data \
     PGLOG=$PGROOT/pg_log
@@ -466,7 +491,7 @@ WORKDIR $PGHOME
 
 ADD motd /etc/
 ADD supervisor /etc/supervisor
-ADD pgq_ticker.ini $PGHOME/
+ADD pgq_ticker.ini $PGHOM
 
 RUN mkdir -p /var/log/supervisor \
         && ln -s supervisor/supervisord.conf /etc/supervisord.conf \
