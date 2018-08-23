@@ -105,7 +105,9 @@ RUN export DEBIAN_FRONTEND=noninteractive \
         && dpkg -i *.deb || apt-get -y -f install \
 
         # install pam_oauth2.so
-        && git clone -b $PAM_OAUTH2 --recurse-submodules https://github.com/CyberDem0n/pam-oauth2.git \
+        && git clone -b $PAM_OAUTH2 https://github.com/CyberDem0n/pam-oauth2.git \
+        && sed 's/git/https/g' .gitmodules \
+        && git submodule update --init --recursive \
         && make -C pam-oauth2 install \
 
         # prepare 3rd sources
