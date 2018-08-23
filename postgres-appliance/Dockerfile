@@ -122,7 +122,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
         && git clone -b $TIMESCALEDB https://github.com/timescale/timescaledb.git \
 
-        && git clone git://www.sigaev.ru/plantuner.git; \
+        && git clone https://github.com/sapcc/plantuner.git; \
     fi \
 
     && curl -sL https://github.com/CyberDem0n/bg_mon/archive/$BG_MON_COMMIT.tar.gz | tar xz \
