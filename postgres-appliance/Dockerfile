@@ -110,8 +110,8 @@ RUN export DEBIAN_FRONTEND=noninteractive \
         && sed -i.bak 's/jsmn.git/jsmn/' .gitmodules \
         && sed -i.bak 's/git:/https:/' .gitmodules \
         && git submodule update --init --recursive \
-        && make -C pam-oauth2 install \
         && cd .. \
+        && make -C pam-oauth2 install \
 
         # prepare 3rd sources
         && curl -sL https://github.com/debezium/postgres-decoderbufs/archive/$DECODERBUFS_COMMIT.tar.gz | tar xz \
