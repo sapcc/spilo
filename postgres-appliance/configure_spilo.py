@@ -120,7 +120,7 @@ bootstrap:
       parameters:
         archive_mode: "on"
         archive_timeout: 1800s
-        wal_level: hot_standby
+        wal_level: logical
         wal_keep_segments: 8
         wal_log_hints: 'on'
         max_wal_senders: 5
@@ -203,7 +203,7 @@ postgresql:
     ssl: 'on'
     ssl_cert_file: {{SSL_CERTIFICATE_FILE}}
     ssl_key_file: {{SSL_PRIVATE_KEY_FILE}}
-    shared_preload_libraries: 'bg_mon,pg_stat_statements,pg_cron,set_user,pgextwlist'
+    shared_preload_libraries: 'bg_mon,pg_stat_statements,pg_cron,set_user,pgextwlist,wal2json'
     bg_mon.listen_address: '0.0.0.0'
     extwlist.extensions: 'btree_gin,btree_gist,citext,hstore,intarray,ltree,pgcrypto,pgq,pg_trgm,postgres_fdw,uuid-ossp,hypopg,pg_partman'
   pg_hba:
