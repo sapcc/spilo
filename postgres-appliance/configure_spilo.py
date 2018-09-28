@@ -486,6 +486,7 @@ def write_wale_environment(placeholders, provider, prefix, overwrite):
             'GOOGLE_APPLICATION_CREDENTIALS',
         ]
     })
+    wale['WALE_LOG_DESTINATION'] = 'stderr'
 
     if not os.path.exists(wale['WALE_ENV_DIR']):
         os.makedirs(wale['WALE_ENV_DIR'])
