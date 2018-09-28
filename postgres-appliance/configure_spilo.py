@@ -526,6 +526,8 @@ def write_wale_environment(placeholders, provider, prefix, overwrite):
         os.chmod(placeholders['WALE_TMPDIR'], 0o1777)
 
     write_file(placeholders['WALE_TMPDIR'], os.path.join(wale['WALE_ENV_DIR'], 'TMPDIR'), True)
+    
+    write_file(wale['WALE_LOG_DESTINATION'], os.path.join(wale['WALE_ENV_DIR'], 'WALE_LOG_DESTINATION'), overwrite)
 
 
 def write_bootstrap_configuration(placeholders, provider, overwrite):
