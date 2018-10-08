@@ -410,7 +410,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
         && find /usr/share/python-babel-localedata/locale-data -type f ! -name 'en_US*.dat' -delete \
 
-        && pip3 install git+https://github.com/sapcc/wal-e@ccloud#egg=aws \
+        && pip3 install filechunkio git+https://github.com/sapcc/wal-e@ccloud#egg=aws \
                 'git+https://github.com/Supervisor/supervisor.git@master#egg=supervisor' \
                 'git+https://github.com/zalando/pg_view.git@master#egg=pg-view' \
 
