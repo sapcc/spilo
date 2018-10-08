@@ -479,7 +479,7 @@ FROM base
 
 MAINTAINER Alexander Kukushkin <alexander.kukushkin@zalando.de>
 
-EXPOSE 5432 8008 8080 9200
+EXPOSE 5432 8008 8080
 
 ENV LC_ALL=en_US.utf-8 \
     PATH=$PATH:/usr/lib/postgresql/${PGVERSION}/bin \
@@ -496,7 +496,8 @@ WORKDIR $PGHOME
 
 ADD motd /etc/
 ADD supervisor /etc/supervisor
-ADD pgq_ticker.ini $PGHOM
+ADD pgq_ticker.ini $PGHOME/
+ADD envdir /usr/local/bin/
 
 RUN mkdir -p /var/log/supervisor \
         && ln -s supervisor/supervisord.conf /etc/supervisord.conf \
@@ -509,6 +510,8 @@ RUN mkdir -p /var/log/supervisor \
         && echo "export PAGER='pspg -bX --no-mouse'" >> /etc/bash.bashrc \
         && echo "source /etc/motd" >> /root/.bashrc
 
-ADD configure_spilo.py launch.sh postgres_backup.sh patroni_wait.sh wale_prometheus_exporter.py post_init.sh _zmon_schema.dump callback_*.py basebackup.sh wale_restore_command.sh wal-e-wal-fetch.sh create_user_functions.sql bootstrap /
+ADD scripts bootstrap /scripts/
+
+ADD scm-source.json launch.sh /
 
 CMD ["/bin/sh", "/launch.sh"]

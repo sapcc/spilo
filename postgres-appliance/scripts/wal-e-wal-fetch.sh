@@ -85,12 +85,12 @@ if [[ -z $AWS_REGION ]]; then
 fi
 
 if [[ -z $S3_HOST ]]; then
-    S3_HOST=s3-$AWS_REGION.amazonaws.com
+    S3_HOST=s3.$AWS_REGION.amazonaws.com
 fi
 
 readonly SERVICE=s3
 readonly REQUEST=aws4_request
-readonly HOST=$S3_HOST
+readonly HOST=$BUCKET.$S3_HOST
 readonly TIME=$(date +%Y%m%dT%H%M%SZ)
 readonly DATE=${TIME%T*}
 readonly DRSR="$DATE/$AWS_REGION/$SERVICE/$REQUEST"
@@ -106,7 +106,7 @@ readonly DATE_REGION_KEY=$(hmac_sha256 hexkey:$DATE_KEY $AWS_REGION)
 readonly DATE_REGION_SERVICE_KEY=$(hmac_sha256 hexkey:$DATE_REGION_KEY $SERVICE)
 readonly SIGNING_KEY=$(hmac_sha256 hexkey:$DATE_REGION_SERVICE_KEY $REQUEST)
 
-if [[ $AWS_INSTANCE_PROFILE == 0 ]]; then
+if [[ -z $AWS_INSTANCE_PROFILE ]]; then
     readonly SIGNED_HEADERS="host;x-amz-content-sha256;x-amz-date"
     readonly REQUEST_TOKEN=""
     readonly TOKEN_HEADER=()
@@ -119,12 +119,12 @@ fi
 function s3_get() {
     local segment=$1
     local destination=$2
-    local FILE=/$BUCKET$BUCKET_PATH/wal_005/$segment.lzo
+    local FILE=$BUCKET_PATH/wal_005/$segment.lzo
     local CANONICAL_REQUEST="GET\n$FILE\n\nhost:$HOST\nx-amz-content-sha256:$EMPTYHASH\nx-amz-date:$TIME\n$REQUEST_TOKEN\n$SIGNED_HEADERS\n$EMPTYHASH"
     local CANONICAL_REQUEST_HASH=$(echo -en $CANONICAL_REQUEST | openssl dgst -sha256 | sed 's/^.* //')
     local STRING_TO_SIGN="AWS4-HMAC-SHA256\n$TIME\n$DRSR\n$CANONICAL_REQUEST_HASH"
     local SIGNATURE=$(hmac_sha256 hexkey:$SIGNING_KEY $STRING_TO_SIGN)
-    echo "MAKING S3 REQUEST: https://$HOST$FILE"
+
     if curl -s https://$HOST$FILE "${TOKEN_HEADER[@]}" -H "x-amz-content-sha256: $EMPTYHASH" -H "x-amz-date: $TIME" \
         -H "Authorization: AWS4-HMAC-SHA256 Credential=$AWS_ACCESS_KEY_ID/$DRSR, SignedHeaders=$SIGNED_HEADERS, Signature=$SIGNATURE" \
         | lzop -dc > $destination 2> /dev/null && [[ ${PIPESTATUS[0]} == 0 ]]; then
