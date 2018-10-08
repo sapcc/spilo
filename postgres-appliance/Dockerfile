@@ -10,8 +10,10 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     && echo 'APT::Install-Recommends "0";' > /etc/apt/apt.conf.d/01norecommend \
     && echo 'APT::Install-Suggests "0";' >> /etc/apt/apt.conf.d/01norecommend \
 
+    && apt-get autoclean \
     && apt-get update \
     && apt-get upgrade -y \
+    && apt-get -u dist-upgrade -y\
 
     && apt-get install -y curl ca-certificates less locales jq vim-tiny gnupg1 \
 
