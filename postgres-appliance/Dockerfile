@@ -419,15 +419,11 @@ RUN export DEBIAN_FRONTEND=noninteractive \
         # https://github.com/wal-e/wal-e/issues/318
         && sed -i 's/^\(    for i in range(0,\) num_retries):.*/\1 100):/g' /usr/lib/python3/dist-packages/boto/utils.py \
 
-        # https://github.com/wal-e/wal-e/pull/384
-        && curl -sL https://github.com/wal-e/wal-e/pull/384.diff | patch -p1 \
-
-        # https://github.com/wal-e/wal-e/pull/392
-        && curl -sL https://github.com/wal-e/wal-e/pull/392.diff | patch -p1 \
-
         && echo 4.0.0.dev0 > supervisor/version.txt; \
     fi \
     && pip3 install "patroni[kubernetes$EXTRAS]==$PATRONIVERSION" \
+    && pip3 install croniter \
+    && pip3 install prometheus_client \
 
     && for d in /usr/local/lib/python3.6 /usr/lib/python3; do \
         cd $d/dist-packages \
