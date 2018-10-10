@@ -509,6 +509,6 @@ RUN mkdir -p /var/log/supervisor \
 
 ADD scripts bootstrap /scripts/
 
-ADD scm-source.json launch.sh /
+ADD launch.sh /
 
 CMD ["/bin/sh", "/launch.sh"]
