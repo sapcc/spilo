@@ -341,7 +341,7 @@ def get_placeholders(provider):
     placeholders.setdefault('PGHOME', os.path.expanduser('~'))
     placeholders.setdefault('APIPORT', '8008')
     placeholders.setdefault('BACKUP_SCHEDULE', '0 1 * * *')
-    placeholders.setdefault('BACKUP_NUM_TO_RETAIN', 2)
+    placeholders.setdefault('BACKUP_NUM_TO_RETAIN', 10)
     placeholders.setdefault('CRONTAB', '[]')
     placeholders.setdefault('PGROOT', os.path.join(placeholders['PGHOME'], 'pgroot'))
     placeholders.setdefault('WALE_TMPDIR', os.path.abspath(os.path.join(placeholders['PGROOT'], '../tmp')))
@@ -575,7 +575,7 @@ def write_wale_environment(placeholders, provider, prefix, overwrite):
             if wale_endpoint:
                 aws_endpoint = wale_endpoint.replace('+path://', '://')
             else:
-                aws_endpoint = 'https://s3.{0}.amazonaws.com:443'.format(aws_region)
+                aws_endpoint = 'https://objectstore-3.{}.cloud.sap:443'.format(aws_region)
 
         if not wale_endpoint and aws_endpoint:
             wale_endpoint = aws_endpoint.replace('://', '+path://')

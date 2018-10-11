@@ -496,6 +496,8 @@ ADD supervisor /etc/supervisor
 ADD pgq_ticker.ini $PGHOME/
 ADD envdir /usr/local/bin/
 
+RUN chmod +x /usr/local/bin/envdir
+
 RUN mkdir -p /var/log/supervisor \
         && ln -s supervisor/supervisord.conf /etc/supervisord.conf \
         && sed -i "s|/var/lib/postgresql.*|$PGHOME:/bin/bash|" /etc/passwd \
