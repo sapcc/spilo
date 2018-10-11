@@ -510,6 +510,7 @@ RUN mkdir -p /var/log/supervisor \
         && echo "source /etc/motd" >> /root/.bashrc
 
 ADD scripts bootstrap /scripts/
+RUN chmod +x /scripts/*
 
 ADD launch.sh /
 
