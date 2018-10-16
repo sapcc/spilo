@@ -545,8 +545,11 @@ def write_wale_environment(placeholders, provider, prefix, overwrite):
 
     wale = defaultdict(lambda: '')
     for name in ['WALE_ENV_DIR', 'SCOPE', 'WAL_BUCKET_SCOPE_PREFIX', 'WAL_BUCKET_SCOPE_SUFFIX', 'WAL_S3_BUCKET',
-                 'WAL_GCS_BUCKET', 'WAL_GS_BUCKET', 'WAL_SWIFT_BUCKET', 'USE_WALG'] + swift_names + gs_names:
-        wale[name] = placeholders.get(prefix + name, '')
+                 'WAL_GCS_BUCKET', 'WAL_GS_BUCKET', 'WAL_SWIFT_BUCKET', 'USE_WALG'] + swift_names + s3_names + gs_names:
+        if not name in s3_names:
+            wale[name] = placeholders.get(prefix + name, '')
+        else:
+             wale[name] = placeholders.get(name, '')
 
     if wale['WAL_GS_BUCKET']:  # WAL_GS_BUCKET is more consistent with WALE_GS_PREFIX
         wale['WAL_GCS_BUCKET'] = wale['WAL_GS_BUCKET']
