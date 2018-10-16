@@ -39,7 +39,9 @@ def read_configuration():
 
 def build_wale_command(envdir, command, datadir=None, backup=None):
     cmd = (['wal-g'] if os.getenv('USE_WALG') == 'true' else ['envdir', envdir, 'wal-e']) + [command]
-    if command == 'backup-fetch':
+    if command == 'backup-list':
+        cmd.extend(['--detail'])
+    elif command == 'backup-fetch':
         if datadir is None or backup is None:
             raise Exception("backup-fetch requires datadir and backup arguments")
         cmd.extend([datadir, backup])
