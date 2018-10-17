@@ -252,9 +252,11 @@ postgresql:
     - wal_e
     - basebackup_fast_xlog
   wal_e:
-    command: envdir {{WALE_ENV_DIR}} bash /scripts/wale_restore.sh
+    command: patroni_wale_restore
+    envdir: {{WALE_ENV_DIR}}
     threshold_megabytes: {{WALE_BACKUP_THRESHOLD_MEGABYTES}}
     threshold_backup_size_percentage: {{WALE_BACKUP_THRESHOLD_PERCENTAGE}}
+    use_iam: 0
     retries: 2
     no_master: 1
   basebackup_fast_xlog:
@@ -340,8 +342,8 @@ def get_placeholders(provider):
 
     placeholders.setdefault('PGHOME', os.path.expanduser('~'))
     placeholders.setdefault('APIPORT', '8008')
-    placeholders.setdefault('BACKUP_SCHEDULE', '0 1 * * *')
-    placeholders.setdefault('BACKUP_NUM_TO_RETAIN', 10)
+    placeholders.setdefault('BACKUP_SCHEDULE', '0 * * * *') # create backup every hour
+    placeholders.setdefault('BACKUP_NUM_TO_RETAIN', 7)      # keep 7 days of backups
     placeholders.setdefault('CRONTAB', '[]')
     placeholders.setdefault('PGROOT', os.path.join(placeholders['PGHOME'], 'pgroot'))
     placeholders.setdefault('WALE_TMPDIR', os.path.abspath(os.path.join(placeholders['PGROOT'], '../tmp')))
